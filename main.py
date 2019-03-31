@@ -3,12 +3,10 @@ import cv2
 from time import sleep
 import math
 from threading import Thread
-from tkinter import *
-from tkinter import ttk
 
 # -------------------V--OPENCV--V----------------------
 
-cap = cv2.VideoCapture(1)
+cap = cv2.VideoCapture(0)
 ##fgbg = cv2.createBackgroundSubtractorMOG2()
 tempret, initframe = cap.read()
 #sleep(1)
@@ -20,6 +18,7 @@ height, width = initframe.shape[:2]
 fov = 75.0 # Degrees
 trackball_radius = 2.0
 pixel_ang_size = fov/width
+
 
 font = cv2.FONT_HERSHEY_SIMPLEX
 
@@ -50,14 +49,15 @@ def opencv_loop():
             if circles.any():
                 circles = np.uint16(np.around(circles))
                 # draw the outer circle
-                cv2.circle(frame,(circles[0][0][0],circles[0][0][1]),circles[0][0][2] + 20,(0,0,255),2)
+                cv2.circle(frame,(circles[0][0][0],circles[0][0][1]),circles[0][0][2],(0,0,255),2)
                 # draw the center of the circle
                 cv2.circle(frame,(circles[0][0][0],circles[0][0][1]),2,(0,0,255),3)
+                # calculate positional data
                 ang_size = float(circles[0][0][2]) * pixel_ang_size
-                distance = trackball_radius / ang_size
+                distance = trackball_radius / math.tan(math.radians(ang_size))
 
                 cv2.putText(frame,'ang_size: ' + str(ang_size),(50,400), font, 1,(255,255,255),2,cv2.LINE_AA)
-                cv2.putText(frame,'distance: ' + str(distance),(50,470), font, 1,(255,255,255),2,cv2.LINE_AA)
+                cv2.putText(frame,'distance: ' + str(distance/100) + "m",(50,470), font, 1,(255,255,255),2,cv2.LINE_AA)
         except:
             pass
         cv2.imshow('Original',frame)
@@ -72,41 +72,9 @@ def opencv_loop():
         if k == 27:
             break
 
-# -------------------V--TKINTER--V-----------------------
-
-#def draw_pos(x=0, y=0, z=0):
-
-lastx, lasty = 0, 0
-
-def xy(event):
-    global lastx, lasty
-    lastx, lasty = event.x, event.y
-
-def addLine(event):
-    global lastx, lasty
-    canvas.create_line((lastx, lasty, event.x, event.y))
-    lastx, lasty = event.x, event.y
-    
-root = Tk()
-root.title("Position View")
-
-root.columnconfigure(0, weight=1)
-root.rowconfigure(0, weight=1)
-
-canvas = Canvas(root)
-canvas.grid(column=0, row=0, sticky=(N, W, E, S))
-canvas.bind("<Button-1>", xy)
-canvas.bind("<B1-Motion>", addLine)
-
 # -------------------V-- THREADING MANAGEMENT --V------------------
     
-tkthread = Thread(name="Motion Tracking: User Interface", target=root.mainloop)
-cvthread = Thread(name="Motion Tracking: OpenCV", target=opencv_loop)
-
-tkthread.start() #start the ui thread
-#cvthread.start() #start the cv stuff
-tkthread.join()
-#cvthread.join()
+opencv_loop()
 
 cap.release()
 cv2.destroyAllWindows()
